@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SearchAI - Busca Semântica com IA</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div class="logo">
+          <i class="fas fa-brain"></i>
+          <h1>Search<span>AI</span></h1>
+        </div>
+        <p class="tagline">Busca semântica com Inteligência Artificial</p>
+        <div class="stats-badge" id="statsBadge">
+          <i class="fas fa-database"></i>
+          <span id="statsText">Carregando...</span>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="hero-content">
+          <h2>Pergunte em linguagem natural</h2>
+          <p>
+            Encontre respostas precisas nos textos sobre Inteligência Artificial
+            usando embeddings semânticos
+          </p>
+        </div>
+      </section>
+
+      <div class="search-container">
+        <div class="search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Ex: Como funciona uma rede neural?"
+            autocomplete="off"
+          />
+          <button id="searchBtn" class="search-btn">
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+        <div class="search-suggestions" id="suggestions">
+          <span class="suggestion-label"
+            ><i class="fas fa-lightbulb"></i> Sugestões:</span
+          >
+          <div class="suggestion-chips" id="suggestionChips"></div>
+        </div>
+      </div>
+
+      <div class="embedding-toggle">
+        <label class="toggle-switch">
+          <input type="checkbox" id="showEmbeddingsCheckbox" checked />
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">
+          <i class="fas fa-chart-line"></i> Mostrar embeddings (vetores
+          numéricos)
+        </span>
+      </div>
+
+      <div class="loading" id="loading" style="display: none">
+        <div class="spinner"></div>
+        <p>Buscando respostas...</p>
+      </div>
+
+      <div class="results-section" id="resultsSection">
+        <div class="results-header" id="resultsHeader" style="display: none">
+          <h3><i class="fas fa-chart-line"></i> Resultados da Busca</h3>
+          <span class="query-badge" id="queryBadge"></span>
+        </div>
+        <div class="results-grid" id="resultsGrid"></div>
+      </div>
+
+      <div class="empty-state" id="emptyState">
+        <i class="fas fa-search fa-3x"></i>
+        <h3>Faça sua primeira pergunta</h3>
+        <p>
+          Digite uma pergunta sobre Inteligência Artificial e veja a magia da
+          busca semântica em ação
+        </p>
+      </div>
+
+      <footer class="footer">
+        <p>
+          Powered by <strong>Sentence Transformers</strong> | Busca por
+          similaridade com embeddings semânticos
+        </p>
+      </footer>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+  </body>
+</html>
