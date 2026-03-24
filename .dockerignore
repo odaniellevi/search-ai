@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+*.pkl
+*.db
+venv
+.venv
+.env
+.git
+.gitignore
+*.md
+*.txt
+!requirements.txt

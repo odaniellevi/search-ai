@@ -6,4 +6,4 @@ __pycache__/
 venv/
 .venv/
 .DS_Store
-*.log
+*.log"search_index.pkl" 
