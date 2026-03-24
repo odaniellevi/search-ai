@@ -1,9 +1,7 @@
 __pycache__/
 *.pyc
-*.pkl
 *.db
 .env
 venv/
 .venv/
 .DS_Store
-*.log"search_index.pkl" 
