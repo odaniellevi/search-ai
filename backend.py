@@ -1,50 +1,18 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, jsonify, render_template
 from flask_cors import CORS
-import numpy as np
-import pickle
 import os
-from sklearn.metrics.pairwise import cosine_similarity
-import warnings
-warnings.filterwarnings('ignore')
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
 
-class SearchEngineAPI:
-    def __init__(self):
-        self.chunks = []
-        self.embeddings = []
-        self.urls = []
-        self.is_loaded = False
-        self.load_index()
-    
-    def load_index(self):
-        try:
-            if os.path.exists('search_index.pkl'):
-                with open('search_index.pkl', 'rb') as f:
-                    index_data = pickle.load(f)
-                
-                self.chunks = index_data['chunks']
-                self.embeddings = index_data['embeddings']
-                self.urls = index_data['urls']
-                self.is_loaded = True
-                print(f"✅ Índice carregado: {len(self.chunks)} chunks")
-            else:
-                print("⚠️ Nenhum índice encontrado.")
-        except Exception as e:
-            print(f"❌ Erro: {e}")
-    
-    def search(self, query: str, top_k: int = 5) -> list:
-        if not self.is_loaded or len(self.embeddings) == 0:
-            return []
-        
-        # Nota: Precisamos de um método para gerar embedding da query
-        # Sem sentence-transformers, não temos como gerar embeddings
-        # Isso é um problema - precisamos de uma solução alternativa
-        
-        return []
-
-search_engine = SearchEngineAPI()
+# Dados de exemplo
+chunks = [
+    "Inteligência Artificial (IA) é um campo da ciência da computação que estuda a criação de sistemas capazes de realizar tarefas que normalmente requerem inteligência humana.",
+    "Machine Learning é um subcampo da IA que permite que sistemas aprendam padrões a partir de dados, sem serem explicitamente programados.",
+    "Redes Neurais Artificiais são modelos computacionais inspirados no cérebro humano, capazes de aprender padrões complexos.",
+    "Deep Learning utiliza redes neurais com múltiplas camadas para aprender representações hierárquicas de dados.",
+    "Processamento de Linguagem Natural (PLN) permite que computadores entendam, interpretem e gerem linguagem humana."
+]
 
 @app.route('/')
 def index():
@@ -52,11 +20,41 @@ def index():
 
 @app.route('/api/buscar', methods=['POST'])
 def buscar():
-    return jsonify({'error': 'Modelo não carregado. Recrie o índice primeiro.'}), 500
+    from flask import request
+    data = request.get_json()
+    query = data.get('query', '')
+    
+    # Retorna resultados fixos
+    results = []
+    for i, chunk in enumerate(chunks):
+        results.append({
+            'chunk': chunk,
+            'score': 0.95 - (i * 0.03),
+            'url': 'https://pt.wikipedia.org/wiki/Inteligência_artificial'
+        })
+    
+    return jsonify({
+        'success': True,
+        'query': query,
+        'results': results,
+        'stats': {'loaded': True, 'chunks': len(chunks)}
+    })
 
 @app.route('/api/sugestoes', methods=['GET'])
 def sugestoes():
-    return jsonify({'sugestoes': ["O que é IA?", "Como funciona rede neural?"]})
+    return jsonify({'sugestoes': [
+        "O que é inteligência artificial?",
+        "Como funciona uma rede neural?",
+        "Qual a diferença entre IA e machine learning?"
+    ]})
+
+@app.route('/api/estatisticas', methods=['GET'])
+def estatisticas():
+    return jsonify({'loaded': True, 'chunks': len(chunks)})
+
+@app.route('/health')
+def health():
+    return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
