@@ -28,8 +28,7 @@ class SearchEngineAPI:
     
     def __init__(self):
         print("🤖 Carregando modelo de embeddings...")
-        # MODELO MAIS LEVE para Railway
-        self.model = SentenceTransformer('paraphrase-MiniLM-L3-v2')
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
         self.chunks = []
         self.embeddings = []
         self.urls = []
