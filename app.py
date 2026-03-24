@@ -1,10 +1,5 @@
 """
 Aplicação de Busca por Similaridade em Textos sobre Inteligência Artificial
-Versão Corrigida com:
-- Limpeza de texto avançada
-- Chunks com sobreposição
-- Remoção de duplicatas
-- Melhor formatação dos resultados
 """
 
 # ==================== IMPORTAÇÕES ====================
