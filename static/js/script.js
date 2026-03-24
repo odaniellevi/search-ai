@@ -1,5 +1,5 @@
-// Configuração da API
-const API_URL = "/api";
+// ==================== CONFIGURAÇÃO ====================
+const BACKEND_URL = "https://unscripted-musingly-dawne.ngrok-free.dev";
 
 // Elementos DOM
 const searchInput = document.getElementById("searchInput");
@@ -15,6 +15,7 @@ const suggestionChips = document.getElementById("suggestionChips");
 
 // Variáveis de controle
 let currentQuery = "";
+let showEmbeddings = true;
 
 // ==================== FUNÇÕES AUXILIARES ====================
 
@@ -50,33 +51,49 @@ function truncateText(text, maxLength = 400) {
   return text.substring(0, maxLength) + "...";
 }
 
-// ==================== CHAMADAS API ====================
+// Função para formatar embedding como string legível
+function formatEmbedding(embedding, maxValues = 15) {
+  if (!embedding || embedding.length === 0) return "[]";
 
-// Carregar estatísticas
-async function loadStats() {
-  try {
-    const response = await fetch(`${API_URL}/estatisticas`);
-    const data = await response.json();
+  const values = embedding.slice(0, maxValues);
+  const formatted = values.map((v) => v.toFixed(4)).join(", ");
 
-    if (data.loaded) {
-      statsText.textContent = `${data.chunks} chunks indexados`;
-    } else {
-      statsText.textContent = "Índice não carregado";
-    }
-  } catch (error) {
-    console.error("Erro ao carregar estatísticas:", error);
-    statsText.textContent = "Erro ao carregar";
+  if (embedding.length > maxValues) {
+    return `[${formatted}, ... (${embedding.length - maxValues} mais)]`;
   }
+  return `[${formatted}]`;
 }
 
-// Carregar sugestões
+// ==================== CHAMADAS API ====================
+
+// Carregar sugestões (usando o backend do Colab)
 async function loadSuggestions() {
   try {
-    const response = await fetch(`${API_URL}/sugestoes`);
+    const response = await fetch(`${BACKEND_URL}/sugestoes`);
     const data = await response.json();
 
     suggestionChips.innerHTML = "";
-    data.sugestoes.forEach((sugestao) => {
+    if (data.sugestoes) {
+      data.sugestoes.forEach((sugestao) => {
+        const chip = document.createElement("div");
+        chip.className = "suggestion-chip";
+        chip.textContent = sugestao;
+        chip.onclick = () => {
+          searchInput.value = sugestao;
+          performSearch();
+        };
+        suggestionChips.appendChild(chip);
+      });
+    }
+  } catch (error) {
+    console.error("Erro ao carregar sugestões:", error);
+    // Fallback: sugestões padrão
+    const fallback = [
+      "O que é inteligência artificial?",
+      "Como funciona uma rede neural?",
+      "Qual a diferença entre IA e machine learning?",
+    ];
+    fallback.forEach((sugestao) => {
       const chip = document.createElement("div");
       chip.className = "suggestion-chip";
       chip.textContent = sugestao;
@@ -86,12 +103,27 @@ async function loadSuggestions() {
       };
       suggestionChips.appendChild(chip);
     });
-  } catch (error) {
-    console.error("Erro ao carregar sugestões:", error);
   }
 }
 
-// Realizar busca
+// Carregar estatísticas (do Colab)
+async function loadStats() {
+  try {
+    const response = await fetch(`${BACKEND_URL}/`);
+    const data = await response.json();
+
+    if (data.chunks) {
+      statsText.textContent = `${data.chunks} chunks indexados`;
+    } else {
+      statsText.textContent = "Índice carregado";
+    }
+  } catch (error) {
+    console.error("Erro ao carregar estatísticas:", error);
+    statsText.textContent = "Backend online";
+  }
+}
+
+// Realizar busca no Colab
 async function performSearch() {
   const query = searchInput.value.trim();
 
@@ -107,21 +139,17 @@ async function performSearch() {
   emptyState.style.display = "none";
 
   try {
-    const response = await fetch(`${API_URL}/buscar`, {
+    const response = await fetch(`${BACKEND_URL}/buscar`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        query: query,
-        top_k: 5,
-        show_embeddings: showEmbeddings, // Envia a preferência
-      }),
+      body: JSON.stringify({ query: query }),
     });
 
     const data = await response.json();
 
-    if (data.success) {
+    if (data.results) {
       displayResults(data, query);
     } else {
       showNotification(data.error || "Erro na busca", "error");
@@ -129,7 +157,7 @@ async function performSearch() {
     }
   } catch (error) {
     console.error("Erro na busca:", error);
-    showNotification("Erro de conexão com o servidor", "error");
+    showNotification("Erro de conexão com o backend do Colab", "error");
     emptyState.style.display = "block";
   } finally {
     loading.style.display = "none";
@@ -137,41 +165,10 @@ async function performSearch() {
 }
 
 // Exibir resultados
-// Variável global para controlar exibição de embeddings
-let showEmbeddings = true;
-
-// Configurar o toggle
-document.addEventListener("DOMContentLoaded", () => {
-  const toggle = document.getElementById("showEmbeddingsCheckbox");
-  if (toggle) {
-    toggle.addEventListener("change", (e) => {
-      showEmbeddings = e.target.checked;
-      // Recarregar resultados se houver uma busca atual
-      if (currentQuery) {
-        performSearch();
-      }
-    });
-  }
-});
-
-// Função para formatar embedding como string legível
-function formatEmbedding(embedding, maxValues = 15) {
-  if (!embedding || embedding.length === 0) return "[]";
-
-  const values = embedding.slice(0, maxValues);
-  const formatted = values.map((v) => v.toFixed(4)).join(", ");
-
-  if (embedding.length > maxValues) {
-    return `[${formatted}, ... (${embedding.length - maxValues} mais)]`;
-  }
-  return `[${formatted}]`;
-}
-
-// Função para exibir resultados
 function displayResults(data, query) {
   const results = data.results;
   const queryEmbedding = data.query_embedding;
-  const embeddingDim = data.embedding_dimension || 384;
+  const embeddingDim = 384; // Dimensão do all-MiniLM-L6-v2
 
   if (!results || results.length === 0) {
     emptyState.style.display = "block";
@@ -188,26 +185,6 @@ function displayResults(data, query) {
   // Gerar cards de resultados
   resultsGrid.innerHTML = "";
 
-  // Mostrar embedding da query (se ativado)
-  if (showEmbeddings && queryEmbedding) {
-    const queryEmbeddingCard = document.createElement("div");
-    queryEmbeddingCard.className = "embedding-card query-embedding";
-    queryEmbeddingCard.innerHTML = `
-            <div class="embedding-title">
-                <i class="fas fa-question-circle"></i>
-                EMBEDDING DA QUERY (${embeddingDim} dimensões)
-                <span style="font-size: 0.6rem; margin-left: auto;">Primeiros 20 valores</span>
-            </div>
-            <div class="embedding-values">
-                ${formatEmbedding(queryEmbedding, 20)}
-            </div>
-            <div style="font-size: 0.65rem; color: #666; margin-top: 0.5rem;">
-                ⚡ Este vetor numérico representa a semântica da sua pergunta
-            </div>
-        `;
-    resultsGrid.appendChild(queryEmbeddingCard);
-  }
-
   results.forEach((result, index) => {
     const card = document.createElement("div");
     card.className = "result-card";
@@ -217,80 +194,57 @@ function displayResults(data, query) {
     const highlightedContent = highlightQuery(result.chunk, query);
     const truncatedContent = truncateText(highlightedContent, 400);
 
-    let embeddingHtml = "";
-    if (showEmbeddings && result.embedding) {
-      embeddingHtml = `
-                <div class="embedding-card" style="margin-top: 1rem;">
-                    <div class="embedding-title">
-                        <i class="fas fa-chart-line"></i>
-                        EMBEDDING DO CHUNK (${embeddingDim} dimensões)
-                    </div>
-                    <div class="embedding-values">
-                        ${formatEmbedding(result.embedding, 15)}
-                    </div>
-                    <div style="font-size: 0.65rem; color: #666; margin-top: 0.5rem;">
-                        🔢 Similaridade calculada via cosseno entre vetores
-                    </div>
-                </div>
-            `;
-    }
-
     card.innerHTML = `
-            <div class="result-header">
-                <div class="result-rank">${index + 1}</div>
-                <div class="result-score ${scoreClass}">
-                    <i class="fas fa-chart-simple"></i>
-                    ${formatScore(result.score)}% relevância
-                </div>
-            </div>
-            <a href="${result.url}" target="_blank" class="result-url">
-                <i class="fas fa-link"></i>
-                ${result.url.length > 60 ? result.url.substring(0, 60) + "..." : result.url}
-            </a>
-            <div class="result-content">
-                ${truncatedContent}
-            </div>
-            ${embeddingHtml}
-        `;
+      <div class="result-header">
+        <div class="result-rank">${index + 1}</div>
+        <div class="result-score ${scoreClass}">
+          <i class="fas fa-chart-simple"></i>
+          ${formatScore(result.score)}% relevância
+        </div>
+      </div>
+      <a href="${result.url}" target="_blank" class="result-url">
+        <i class="fas fa-link"></i>
+        ${result.url.length > 60 ? result.url.substring(0, 60) + "..." : result.url}
+      </a>
+      <div class="result-content">
+        ${truncatedContent}
+      </div>
+    `;
 
     resultsGrid.appendChild(card);
   });
 
-  // Atualizar a chamada da API para incluir o resultado
-  if (data.query_embedding) {
-    const infoCard = document.createElement("div");
-    infoCard.className = "result-card";
-    infoCard.style.background = "rgba(16, 185, 129, 0.1)";
-    infoCard.style.border = "1px solid rgba(16, 185, 129, 0.3)";
-    infoCard.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-info-circle" style="color: #10b981;"></i>
-                <strong>📊 Informações Técnicas</strong>
-            </div>
-            <div style="margin-top: 0.75rem; font-size: 0.875rem;">
-                • Dimensão dos embeddings: ${embeddingDim}<br>
-                • Total de chunks no índice: ${data.stats?.chunks || "N/A"}<br>
-                • Similaridade calculada: Cosseno entre vetores (quanto maior, mais similar)<br>
-                • Embeddings gerados com: Sentence Transformer (paraphrase-multilingual-MiniLM-L12-v2)
-            </div>
-        `;
-    resultsGrid.appendChild(infoCard);
-  }
+  // Informações técnicas
+  const infoCard = document.createElement("div");
+  infoCard.className = "result-card";
+  infoCard.style.background = "rgba(16, 185, 129, 0.1)";
+  infoCard.style.border = "1px solid rgba(16, 185, 129, 0.3)";
+  infoCard.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <i class="fas fa-info-circle" style="color: #10b981;"></i>
+      <strong>📊 Informações Técnicas</strong>
+    </div>
+    <div style="margin-top: 0.75rem; font-size: 0.875rem;">
+      • Modelo: all-MiniLM-L6-v2 (80MB)<br>
+      • Total de chunks: ${data.stats?.chunks || results.length}<br>
+      • Similaridade: Cosseno entre vetores (quanto maior, mais similar)<br>
+      • Backend rodando no Google Colab com GPU
+    </div>
+  `;
+  resultsGrid.appendChild(infoCard);
 }
 
 // Notificações
 function showNotification(message, type = "info") {
-  // Criar elemento de notificação
   const notification = document.createElement("div");
   notification.className = `notification notification-${type}`;
   notification.innerHTML = `
-        <i class="fas ${type === "error" ? "fa-exclamation-circle" : "fa-info-circle"}"></i>
-        <span>${message}</span>
-    `;
+    <i class="fas ${type === "error" ? "fa-exclamation-circle" : "fa-info-circle"}"></i>
+    <span>${message}</span>
+  `;
 
   document.body.appendChild(notification);
 
-  // Estilo da notificação
   notification.style.position = "fixed";
   notification.style.bottom = "20px";
   notification.style.right = "20px";
@@ -304,7 +258,6 @@ function showNotification(message, type = "info") {
   notification.style.zIndex = "1000";
   notification.style.animation = "slideIn 0.3s ease";
 
-  // Remover após 3 segundos
   setTimeout(() => {
     notification.remove();
   }, 3000);
@@ -312,10 +265,20 @@ function showNotification(message, type = "info") {
 
 // ==================== EVENT LISTENERS ====================
 
-// Buscar ao clicar no botão
-searchBtn.addEventListener("click", performSearch);
+// Configurar toggle de embeddings
+document.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.getElementById("showEmbeddingsCheckbox");
+  if (toggle) {
+    toggle.addEventListener("change", (e) => {
+      showEmbeddings = e.target.checked;
+      if (currentQuery) {
+        performSearch();
+      }
+    });
+  }
+});
 
-// Buscar ao pressionar Enter
+searchBtn.addEventListener("click", performSearch);
 searchInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
     performSearch();
@@ -324,7 +287,6 @@ searchInput.addEventListener("keypress", (e) => {
 
 // ==================== INICIALIZAÇÃO ====================
 
-// Carregar dados iniciais
 loadStats();
 loadSuggestions();
 
